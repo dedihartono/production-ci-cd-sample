@@ -165,11 +165,20 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
         continue-on-error: true
       
+      - name: Set Docker image name for backend
+        id: docker-backend
+        run: |
+          if [ -n "${{ secrets.DOCKER_USERNAME }}" ]; then
+            echo "image=${{ secrets.DOCKER_USERNAME }}/portfolio-backend" >> $GITHUB_OUTPUT
+          else
+            echo "image=portfolio-backend" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Extract metadata for backend
         id: meta-backend
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKER_USERNAME }}/portfolio-backend
+          images: ${{ steps.docker-backend.outputs.image }}
           tags: |
             type=ref,event=branch
             type=sha,prefix={{branch}}-
@@ -180,17 +189,26 @@ jobs:
         with:
           context: ./backend
           file: ./infra/docker/Dockerfile.backend
-          push: ${{ github.event_name != 'pull_request' }}
+          push: ${{ github.event_name != 'pull_request' && secrets.DOCKER_USERNAME != '' }}
           tags: ${{ steps.meta-backend.outputs.tags }}
           labels: ${{ steps.meta-backend.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       
+      - name: Set Docker image name for frontend
+        id: docker-frontend
+        run: |
+          if [ -n "${{ secrets.DOCKER_USERNAME }}" ]; then
+            echo "image=${{ secrets.DOCKER_USERNAME }}/portfolio-frontend" >> $GITHUB_OUTPUT
+          else
+            echo "image=portfolio-frontend" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Extract metadata for frontend
         id: meta-frontend
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKER_USERNAME }}/portfolio-frontend
+          images: ${{ steps.docker-frontend.outputs.image }}
           tags: |
             type=ref,event=branch
             type=sha,prefix={{branch}}-
@@ -201,7 +219,7 @@ jobs:
         with:
           context: ./frontend
           file: ./infra/docker/Dockerfile.frontend
-          push: ${{ github.event_name != 'pull_request' }}
+          push: ${{ github.event_name != 'pull_request' && secrets.DOCKER_USERNAME != '' }}
           tags: ${{ steps.meta-frontend.outputs.tags }}
           labels: ${{ steps.meta-frontend.outputs.labels }}
           cache-from: type=gha
