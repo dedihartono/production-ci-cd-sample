@@ -1,0 +1,61 @@
+# Multi-stage build for frontend with Vite
+ARG ENV=production
+
+# Stage 1: Dependencies
+FROM node:24-alpine AS deps
+WORKDIR /app
+COPY frontend/package*.json ./
+# Try npm ci first (faster, more reliable), fallback to npm install if lock file is out of sync
+RUN npm ci || (echo "package-lock.json out of sync, running npm install..." && npm install) && \
+    npm cache clean --force
+
+# Stage 2: Build
+FROM node:24-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY frontend/ .
+ARG VITE_API_URL
+ENV VITE_API_URL=${VITE_API_URL}
+RUN npm run build
+
+# Stage 3: Production (nginx)
+FROM nginx:alpine AS production
+# nginx user/group already exists in nginx:alpine, just ensure correct ownership
+RUN chown -R nginx:nginx /usr/share/nginx/html /var/cache/nginx /var/log/nginx /etc/nginx/conf.d || true
+# Ensure wget is available for health checks
+RUN apk add --no-cache wget curl || true
+COPY --from=builder --chown=nginx:nginx /app/dist /usr/share/nginx/html
+COPY infra/nginx/nginx.frontend.conf /etc/nginx/conf.d/default.conf
+# Note: nginx -t is skipped here because upstream "backend" is not resolvable at build time
+# Nginx will validate config and fail fast at container startup if config is invalid
+EXPOSE 80
+# Health check: try wget first, fallback to curl, or check if nginx process is running
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://localhost/health 2>/dev/null || \
+      curl -f http://localhost/health 2>/dev/null || \
+      (pgrep nginx > /dev/null && exit 0 || exit 1)
+CMD ["nginx", "-g", "daemon off;"]
+
+# Stage 4: Development (dev server)
+FROM deps AS development
+WORKDIR /app
+COPY frontend/ .
+ENV VITE_API_URL=${VITE_API_URL:-http://localhost:3000}
+EXPOSE 3001
+# Create entrypoint script to ensure node_modules exist
+RUN echo '#!/bin/sh' > /entrypoint.sh && \
+    echo 'if [ ! -d "node_modules" ] || [ ! -f "node_modules/.bin/vite" ]; then' >> /entrypoint.sh && \
+    echo '  echo "Installing dependencies..."' >> /entrypoint.sh && \
+    echo '  npm install' >> /entrypoint.sh && \
+    echo 'fi' >> /entrypoint.sh && \
+    echo 'exec npm run dev' >> /entrypoint.sh && \
+    chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+
+# Stage 5: Staging (production build, same as production - nginx.staging.conf is for nginx service, not frontend)
+FROM production AS staging
+# Frontend container serves static files, nginx service handles reverse proxy
+# Keep nginx.frontend.conf (already copied in production stage)
+
+# Final stage selection based on ENV build arg
+FROM ${ENV} AS final

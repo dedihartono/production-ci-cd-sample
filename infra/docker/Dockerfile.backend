@@ -1,0 +1,58 @@
+# Multi-stage build for backend with environment support
+ARG ENV=production
+
+# Stage 1: Dependencies
+FROM node:24-alpine AS deps
+WORKDIR /app
+COPY backend/package*.json ./
+# Try npm ci first (faster, more reliable), fallback to npm install if lock file is out of sync
+RUN npm ci --only=production || (echo "package-lock.json out of sync, running npm install..." && npm install --only=production) && \
+    npm cache clean --force
+
+# Stage 2: Development dependencies (only for dev/staging)
+FROM node:24-alpine AS dev-deps
+WORKDIR /app
+# Create nodejs user for development stage
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+COPY backend/package*.json ./
+# Try npm ci first, fallback to npm install if lock file is out of sync
+RUN npm ci || (echo "package-lock.json out of sync, running npm install..." && npm install) && \
+    npm cache clean --force
+
+# Stage 3: Build (only needed if building TypeScript or other compiled code)
+FROM node:24-alpine AS builder
+WORKDIR /app
+COPY backend/ .
+# Add build steps here if needed
+
+# Stage 4: Production
+FROM node:24-alpine AS production
+WORKDIR /app
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
+COPY --chown=nodejs:nodejs backend/ .
+ENV NODE_ENV=production
+USER nodejs
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+CMD ["node", "src/server.js"]
+
+# Stage 5: Development
+FROM dev-deps AS development
+WORKDIR /app
+COPY --chown=nodejs:nodejs backend/ .
+ENV NODE_ENV=development
+USER nodejs
+EXPOSE 3000
+CMD ["npm", "run", "dev"]
+
+# Stage 6: Staging (production-like with monitoring)
+FROM production AS staging
+ENV NODE_ENV=staging
+# Add staging-specific configurations
+
+# Final stage selection based on ENV build arg
+FROM ${ENV} AS final

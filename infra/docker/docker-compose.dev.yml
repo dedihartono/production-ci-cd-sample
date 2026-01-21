@@ -1,0 +1,49 @@
+services:
+  backend:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.backend
+      target: development
+      args:
+        ENV: development
+    container_name: portfolio-backend-dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../../backend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - FRONTEND_URL=http://localhost:3001
+    networks:
+      - portfolio-network
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.frontend
+      target: development
+      args:
+        ENV: development
+        VITE_API_URL: http://localhost:3000
+    container_name: portfolio-frontend-dev
+    ports:
+      - "3001:3001"
+    volumes:
+      # Mount node_modules as anonymous volume FIRST to preserve installed packages
+      - /app/node_modules
+      # Then mount source code
+      - ../../frontend:/app
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    networks:
+      - portfolio-network
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+networks:
+  portfolio-network:
+    driver: bridge

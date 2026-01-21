@@ -1,0 +1,43 @@
+# Snyk (https://snyk.io) policy file, patches or ignores known vulnerabilities.
+version: v1.25.0
+
+# Ignore vulnerabilities (use with caution - always document why)
+# Format: SNYK-<LANGUAGE>-<VULN_ID>
+# Example:
+# ignore:
+#   'SNYK-JS-EXPRESS-123456':
+#     - '*':
+#         reason: 'False positive - not applicable to our use case'
+#         expires: '2024-12-31T00:00:00.000Z'
+
+# Patch vulnerabilities automatically (if patches are available)
+patch: {}
+
+# Language settings
+language-settings:
+  javascript:
+    # Fail build on high or critical severity vulnerabilities
+    severity-threshold: high
+    # Only fail on vulnerabilities that can be fixed
+    fail-on: upgradable
+
+# Exclude paths from scanning (optional)
+exclude:
+  global:
+    - '**/node_modules/**'
+    - '**/dist/**'
+    - '**/build/**'
+    - '**/.git/**'
+    - '**/coverage/**'
+
+# Docker/Container scanning settings
+docker:
+  # Fail on high or critical vulnerabilities
+  severity-threshold: high
+  # Scan base images
+  base-image-remediation: true
+
+# Project metadata
+meta:
+  policy: 'Production-Ready CI/CD Sample - Security Policy'
+  created: '2024-01-01T00:00:00.000Z'
