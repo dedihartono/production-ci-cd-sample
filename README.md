@@ -218,21 +218,26 @@ If `docker compose` command is not found:
 
 #### Package Lock File Out of Sync
 
-If you see errors like "package-lock.json out of sync" during Docker build:
+If you see errors like "package-lock.json out of sync" or "lock file's X does not satisfy Y":
+
+**In CI/CD**: The workflows now automatically fallback to `npm install` if `npm ci` fails, so CI should continue to work.
+
+**To fix permanently** (regenerate lock files):
 
 ```bash
 # Regenerate package-lock.json files
 ./scripts/fix-dependencies.sh
 
-# Then rebuild Docker images
-docker compose -f docker-compose.dev.yml up --build
-```
-
-Or manually:
-```bash
+# Or manually:
 cd frontend && rm package-lock.json && npm install
 cd ../backend && rm package-lock.json && npm install
+
+# Commit the updated package-lock.json files
+git add frontend/package-lock.json backend/package-lock.json
+git commit -m "chore: update package-lock.json files"
 ```
+
+**Note**: After adding new dependencies (like `globals`, `@eslint/js`), always regenerate lock files before committing.
 
 #### Container Name Conflicts
 

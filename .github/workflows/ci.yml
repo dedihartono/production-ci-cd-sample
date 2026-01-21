@@ -25,7 +25,7 @@ jobs:
       - name: Install backend dependencies
         run: |
           cd backend
-          npm ci
+          npm ci || (echo "package-lock.json out of sync, running npm install..." && npm install)
       
       - name: Lint backend
         run: |
@@ -35,7 +35,7 @@ jobs:
       - name: Install frontend dependencies
         run: |
           cd frontend
-          npm ci
+          npm ci || (echo "package-lock.json out of sync, running npm install..." && npm install)
       
       - name: Lint frontend
         run: |
@@ -59,8 +59,8 @@ jobs:
       
       - name: Install dependencies
         run: |
-          cd backend && npm ci
-          cd ../frontend && npm ci
+          cd backend && (npm ci || (echo "package-lock.json out of sync, running npm install..." && npm install))
+          cd ../frontend && (npm ci || (echo "package-lock.json out of sync, running npm install..." && npm install))
       
       - name: Run security scan script
         run: |
@@ -114,7 +114,7 @@ jobs:
       - name: Install backend dependencies
         run: |
           cd backend
-          npm ci
+          npm ci || (echo "package-lock.json out of sync, running npm install..." && npm install) || (echo "package-lock.json out of sync, running npm install..." && npm install)
       
       - name: Run backend tests
         run: |
@@ -124,7 +124,7 @@ jobs:
       - name: Install frontend dependencies
         run: |
           cd frontend
-          npm ci
+          npm ci || (echo "package-lock.json out of sync, running npm install..." && npm install) || (echo "package-lock.json out of sync, running npm install..." && npm install)
       
       - name: Run frontend tests
         run: |

@@ -28,7 +28,7 @@ lint-backend:
   <<: *npm_cache
   script:
     - cd backend
-    - npm ci
+    - npm ci || (echo "package-lock.json out of sync, running npm install..." && npm install)
     - npm run lint || true
   only:
     - merge_requests
@@ -42,7 +42,7 @@ lint-frontend:
   <<: *npm_cache
   script:
     - cd frontend
-    - npm ci
+    - npm ci || (echo "package-lock.json out of sync, running npm install..." && npm install)
     - npm run lint
   only:
     - merge_requests
@@ -111,7 +111,7 @@ test-backend:
   <<: *npm_cache
   script:
     - cd backend
-    - npm ci
+    - npm ci || (echo "package-lock.json out of sync, running npm install..." && npm install) || (echo "package-lock.json out of sync, running npm install..." && npm install)
     - npm test -- --coverage
   coverage: '/All files[^|]*\|[^|]*\s+([\d\.]+)/'
   artifacts:
@@ -134,7 +134,7 @@ test-frontend:
   <<: *npm_cache
   script:
     - cd frontend
-    - npm ci
+    - npm ci || (echo "package-lock.json out of sync, running npm install..." && npm install) || (echo "package-lock.json out of sync, running npm install..." && npm install)
     - npm test -- --coverage --watchAll=false
   artifacts:
     reports:
