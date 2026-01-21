@@ -85,7 +85,6 @@ jobs:
           config: >-
             p/security-audit
             p/secrets
-          generateSarif: "1"
         continue-on-error: true
       
       - name: Run Snyk to check for vulnerabilities
