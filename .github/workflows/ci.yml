@@ -157,28 +157,29 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       
-      - name: Log in to Docker Hub (if needed)
+      - name: Log in to GitHub Container Registry
         if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Log in to Docker Hub (optional, fallback)
+        if: github.event_name != 'pull_request' && secrets.DOCKER_USERNAME != ''
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
         continue-on-error: true
       
-      - name: Set Docker image name for backend
-        id: docker-backend
-        run: |
-          if [ -n "${{ secrets.DOCKER_USERNAME }}" ]; then
-            echo "image=${{ secrets.DOCKER_USERNAME }}/portfolio-backend" >> $GITHUB_OUTPUT
-          else
-            echo "image=portfolio-backend" >> $GITHUB_OUTPUT
-          fi
-      
       - name: Extract metadata for backend
         id: meta-backend
         uses: docker/metadata-action@v5
         with:
-          images: ${{ steps.docker-backend.outputs.image }}
+          images: |
+            ghcr.io/${{ github.repository_owner }}/portfolio-backend
+            ${{ secrets.DOCKER_USERNAME != '' && format('{0}/portfolio-backend', secrets.DOCKER_USERNAME) || '' }}
           tags: |
             type=ref,event=branch
             type=sha,prefix={{branch}}-
@@ -189,26 +190,19 @@ jobs:
         with:
           context: ./backend
           file: ./infra/docker/Dockerfile.backend
-          push: ${{ github.event_name != 'pull_request' && secrets.DOCKER_USERNAME != '' }}
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta-backend.outputs.tags }}
           labels: ${{ steps.meta-backend.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
       
-      - name: Set Docker image name for frontend
-        id: docker-frontend
-        run: |
-          if [ -n "${{ secrets.DOCKER_USERNAME }}" ]; then
-            echo "image=${{ secrets.DOCKER_USERNAME }}/portfolio-frontend" >> $GITHUB_OUTPUT
-          else
-            echo "image=portfolio-frontend" >> $GITHUB_OUTPUT
-          fi
-      
       - name: Extract metadata for frontend
         id: meta-frontend
         uses: docker/metadata-action@v5
         with:
-          images: ${{ steps.docker-frontend.outputs.image }}
+          images: |
+            ghcr.io/${{ github.repository_owner }}/portfolio-frontend
+            ${{ secrets.DOCKER_USERNAME != '' && format('{0}/portfolio-frontend', secrets.DOCKER_USERNAME) || '' }}
           tags: |
             type=ref,event=branch
             type=sha,prefix={{branch}}-
@@ -219,7 +213,7 @@ jobs:
         with:
           context: ./frontend
           file: ./infra/docker/Dockerfile.frontend
-          push: ${{ github.event_name != 'pull_request' && secrets.DOCKER_USERNAME != '' }}
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta-frontend.outputs.tags }}
           labels: ${{ steps.meta-frontend.outputs.labels }}
           cache-from: type=gha
