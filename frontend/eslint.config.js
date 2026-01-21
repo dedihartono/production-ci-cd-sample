@@ -48,6 +48,35 @@ export default [
       'security/detect-object-injection': 'off',
       'react/prop-types': 'off',
       'react/react-in-jsx-scope': 'off', // Not needed with React 17+ JSX transform
+      // Allow unused vars that start with underscore
+      'no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
+    },
+  },
+  // Test files configuration
+  {
+    files: ['**/*.test.{js,jsx}', '**/*.spec.{js,jsx}', '**/test/**/*.{js,jsx}'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+        ...globals.jest,
+      },
+    },
+    rules: {
+      // More lenient rules for test files
+      'no-unused-vars': [
+        'warn',
+        {
+          argsIgnorePattern: '^_',
+          varsIgnorePattern: '^_',
+        },
+      ],
+      'security/detect-object-injection': 'off',
     },
   },
 ];

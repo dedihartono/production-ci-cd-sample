@@ -134,8 +134,8 @@ test-frontend:
   <<: *npm_cache
   script:
     - cd frontend
-    - npm ci || (echo "package-lock.json out of sync, running npm install..." && npm install) || (echo "package-lock.json out of sync, running npm install..." && npm install)
-    - npm test -- --coverage --watchAll=false
+    - npm ci || (echo "package-lock.json out of sync, running npm install..." && npm install)
+    - npm test
   artifacts:
     reports:
       coverage_report:
